@@ -1,0 +1,115 @@
+# CHIP-8 Instruction Set
+0nnn - SYS addr
+  SYSTEM
+  Jump to a machine code routine at address nnn
+  This is a NOOP on modern computers
+00E0 - CLS
+  CLEAR SCREEN
+  Clear the display
+  ...
+00EE - RET
+  RETURN
+  Return from subroutine
+  Set the program ctr to the addr at top of stack then dec the stack ptr
+1nnn - JP addr
+  JUMP
+  Jump to address nnn
+  Set the program counter to nnn
+2nnn - CALL addr
+  CALL
+  Call subroutine at nnn
+  inc stack ptr, put current prog ctr on top of stack, set prog ctr to nnn
+3xkk - SE Vx, byte
+  SKIP IF EQUAL
+  Skip next instruction if V_(x) = kk
+  Compare register V_(x) to kk; if equal, inc prog ctr by 2
+4xkk - SNE Vx, byte
+  SKIP IF NOT EQUAL
+  Skip next instruction if V_(x) != kk
+  Compare register V_(x) to kk; if not equal, inc prog ctr by 2
+5xy0 - SE Vx, Vy
+  SKIP IF EQUAL (registers)
+  Skip next instruction if V_(x) = V_(y)
+  Compare register V_(x) to register V_(y); if equal, inc prog ctr by 2
+6xkk - LD Vx, byte
+  LOAD
+  Set V_(x) <- kk
+  Set register V_(x) to value kk
+7xkk - ADD Vx, byte
+  ADD
+  Set V_(x) <- V_(x) + kk; AKA V_(x) += kk
+  Add kk to register V_(x) and store result in same register
+8xy0 - LD Vx, Vy
+  LOAD
+  Set V_(x) <- V_(y)
+  Store contents of V_(y) in V_(x)
+8xy1 - OR Vx, Vy
+  x |= y
+8xy2 - AND Vx, Vy
+  x &= y
+8xy3 - XOR Vx, Vy
+  x ^= y
+8xy4 - ADD Vx, Vy
+  (x += y) MOD 256; VF <- carry
+8xy5 - SUB Vx, Vy
+  (x -= y) MOD 256; (first) VF <- (V_(x) > V_(y))
+8xy6 - SHR Vx {, Vy} # TODO
+  SHIFT RIGHT
+
+8xy7 - SUBN Vx, Vy
+  SUBTRACT NEGATIVE (?)
+  V_(x) <- V_(y) - V_(x) MOD 256; (first) VF <- (V_(x) > V_(y))
+8xyE - SHL Vx {, Vy} # TODO
+  SHIFT LEFT
+
+9xy0 - SNE Vx, Vy
+  SKIP IF NOT EQUAL (registers)
+  Skip next instruction if V_(x) != V_(y)
+  Compare register V_(x) to register V_(y); if not equal, inc prog ctr by 2
+Annn - LD I, addr
+  LOAD
+  Set register I <- nnn
+Bnnn - JP V0, addr
+  JUMP
+  Jump to location nnn + V0
+  Set program counter to nnn + register V0
+Cxkk - RND Vx, byte
+  RANDOM
+  Generate random integer in [0, 255] and AND it with kk
+  # TODO: Why?
+Dxyn - DRW Vx, Vy, nibble
+  DRAW
+  Blit n-byte sprite from memory at contents of I to screen @ <V_(x), V_(y)>
+  Set VF = 1 if any pixels are erased by this (!)
+Ex9E - SKP Vx
+  SKIP
+  Skip next instruction if key with value V_(x) is pressed
+ExA1 - SKNP Vx
+  SKIP NOT
+  Skip next instruction if key with value V_(x) is not pressed
+Fx07 - LD Vx, DT
+  LOAD
+  Set V_(x) to delay timer value DT
+Fx0A - LD Vx, K
+  LOAD
+  Wait for key press and load pressed value into V_(x)
+Fx15 - LD DT, Vx
+  LOAD
+  Set delay timer DT to V_(x)
+Fx18 - LD ST, Vx
+  LOAD
+  Set sound timer ST to V_(x)
+Fx1E - ADD I, Vx
+  ADD
+  I += V_(x)
+Fx29 - LD F, Vx
+  LOAD
+  Set I <- location of Numeral Sprite for digit V_(x), as shown in table
+Fx33 - LD B, Vx
+  LOAD
+  Store BCD rep. of V_(x) in memory locations I, I+1, I+2
+  That is, hundreds, tens and ones places of decimal value respectively
+Fx55 - LD [I], Vx
+  Store registers V_(0) through V_(x) in memory starting at loc I
+Fx65 - LD Vx, [I]
+  Read registers V_(0) through V_(x) from memory starting at loc I
