@@ -159,7 +159,7 @@ Chip8 *c8_init() {
     c8->genregs[i] = (u8)0;
   }
   c8->rgstr_I = 0;
-  c8->progctr = 0;
+  c8->progctr = 0x200; /* Assume we begin at start of accessible memory */
   c8->stakptr = 0;
   for(int i = 0; i < 26; ++i) { /* TODO: do this properly with a memset */
     c8->calstak[i] = (u8)0;
@@ -194,9 +194,13 @@ u16 c8_set_prog_ctr(Chip8 *c8, u16 val) {
 }
 
 void c8_jump(Chip8 *c8, u16 addr) {
-  c8->progctr = addr;
+  c8_set_prog_ctr(c8, addr);
 
   c8->jumped = 1;
+}
+
+void c8_skip(Chip8 *c8) {
+  c8_jump(c8, c8->progctr + 4);
 }
 
 /* is the key with value "key" pressed? */
@@ -248,7 +252,7 @@ void c8_00E0(Chip8 *c8, u16 instruction) {
 
 /* Return from subroutine */
 void c8_00EE(Chip8 *c8, u16 instruction) {
-  c8->progctr = c8_stack_pop(c8);
+  c8_jump(c8, c8_stack_pop(c8));
 }
 
 /* Jump to address nnn */
@@ -270,7 +274,7 @@ void c8_3xkk(Chip8 *c8, u16 instruction) {
   u8 value = c8_extract_bbkk(instruction);
 
   if(c8->genregs[regidx] == value) {
-    c8_jump(c8, c8->progctr + 2);
+    c8_skip(c8);
   }
 }
 
@@ -280,7 +284,7 @@ void c8_4xkk(Chip8 *c8, u16 instruction) {
   u8 value = c8_extract_bbkk(instruction);
 
   if(c8->genregs[regidx] != value) {
-    c8_jump(c8, c8->progctr + 2);
+    c8_skip(c8);
   }
 }
 
@@ -290,7 +294,7 @@ void c8_5xy0(Chip8 *c8, u16 instruction) {
   u8 regidx_y = c8_extract_bbyb(instruction);
 
   if(c8->genregs[regidx_x] != c8->genregs[regidx_y]) {
-    c8_jump(c8, c8->progctr + 2);
+    c8_skip(c8);
   }
 }
 
@@ -409,7 +413,7 @@ void c8_9xy0(Chip8 *c8, u16 instruction) {
   u8 regidx_y = c8_extract_bbyb(instruction);
 
   if(c8->genregs[regidx_x] != c8->genregs[regidx_y]) {
-    c8_jump(c8, c8->progctr + 2);
+    c8_skip(c8);
   }
 }
 
@@ -480,7 +484,7 @@ void c8_Ex9E(Chip8 *c8, u16 instruction) {
   u8 regidx = c8_extract_bxbb(instruction);
 
   if(c8_get_key(c8, c8->genregs[regidx])) {
-    c8_jump(c8, c8->progctr + 2);
+    c8_skip(c8);
   }
 }
 
@@ -489,7 +493,7 @@ void c8_ExA1(Chip8 *c8, u16 instruction) {
   u8 regidx = c8_extract_bxbb(instruction);
 
   if(!c8_get_key(c8, c8->genregs[regidx])) {
-    c8_jump(c8, c8->progctr + 2);
+    c8_skip(c8);
   }
 }
 
@@ -569,8 +573,10 @@ void c8_Fx65(Chip8 *c8, u16 instruction) {
 /* BEGIN dispatcher */
 
 /* Call appropriate instruction function */
-void c8_dispatcher(Chip8 *c8, u16 instruction) {
-  if((instruction & 0xFFFF) == 0x00E0) {
+u8 c8_dispatch(Chip8 *c8, u16 instruction) {
+  if((instruction & 0xFFFF) == 0x0000) {
+    return 0;
+  } else if((instruction & 0xFFFF) == 0x00E0) {
     c8_00E0(c8, instruction);
   } else if((instruction & 0xFFFF) == 0x00EE) {
     c8_00EE(c8, instruction);
@@ -640,7 +646,11 @@ void c8_dispatcher(Chip8 *c8, u16 instruction) {
     c8_Fx55(c8, instruction);
   } else if((instruction & 0xF0FF) == 0xF065) {
     c8_Fx65(c8, instruction);
+  } else {
+    return 0; /* bad instruction */
   }
+
+  return 1;
 }
 
 /* END dispatcher */
@@ -648,18 +658,42 @@ void c8_dispatcher(Chip8 *c8, u16 instruction) {
 
 /* BEGIN main loop */
 
-void c8_mainloop() {
+u8 c8_mainloop(Chip8 *c8) {
+  /* beep if ST is >0. decrement DT and ST. */
+  if(c8->soundtm) {
+    /* TODO: beep */
+    c8->soundtm--;
+  }
+  if(c8->delaytm) {
+    c8->delaytm--;
+  }
+
   /* read instruction */
+  u16 instruction = (((u16)(c8->memlocs[c8->progctr])) << 8) | (u16)(c8->memlocs[c8->progctr + 1]);
 
   /* dispatch instruction */
-
-  /* beep if ST is >0. decremeent DT and ST. */
+  if(!c8_dispatch(c8, instruction)) {
+    return 0;
+  }
 
   /* increment program counter IF jumped is not true. set jumped to false. */
+  if(!c8->jumped) {
+    c8->progctr += 2;
+    if(c8->progctr >= 4096) { /* halt */
+      return 0;
+    }
+  }
+  c8->jumped = 0;
 
   /* clear keyboard bits and get new keyboard state */
+  c8->keyboard = 0;
+  /* TODO: Get keyboard state */
 
   /* sleep until C8 clock cycle is up */
+  /* TODO */
+  usleep(2000);
+
+  return 1; /* keep going */
 }
 
 /* END main loop */

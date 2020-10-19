@@ -1,0 +1,22 @@
+# Set I to point at sprite
+0xA210
+
+# START LOOP
+# put x and y values in registers 1 and 2 from register 3 (t)
+0x8130 # V1 <- V3
+0x8230 # V2 <- V3
+0xD128 # draw sprite of length 8 at location x (V1), y (V2)
+0x7301 # increment V3
+0x3350 # Skip next if V3 == 0x50
+0x1202 # GOTO START LOOP *
+0x0000 # END LOOP
+
+# sprite data @ 0x210
+0x97
+0x11
+0x92
+0x07
+0x70
+0x35
+0x17
+0x61

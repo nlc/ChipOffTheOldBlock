@@ -30,21 +30,42 @@ void test_blit() {
     u8 y = i;
 
     /* load x into register 1 */
-    c8_dispatcher(c8, 0x6100 + x);
+    c8_dispatch(c8, 0x6100 + x);
 
     /* load y into register 2 */
-    c8_dispatcher(c8, 0x6200 + y);
+    c8_dispatch(c8, 0x6200 + y);
 
-    c8_dispatcher(c8, 0xD120 + sprite_len);
+    c8_dispatch(c8, 0xD120 + sprite_len);
 
     c8display_to_stdout(c8d, 2, 1);
     usleep(50000);
   }
 }
 
+void test_instructions() {
+  Chip8 *c8 = c8_init();
+
+  FILE *instfile = fopen("test.c8", "rb");
+
+  if(instfile) {
+    fseek(instfile, 0, SEEK_END);
+    int length = ftell(instfile);
+    fseek(instfile, 0, SEEK_SET);
+    fread(c8->memlocs + 0x200, 1, length, instfile);
+  }
+
+  fclose(instfile);
+
+  while(c8_mainloop(c8)) {
+    c8display_to_stdout(c8->display, 1, 1);
+  }
+
+  free(c8->display);
+  free(c8);
+}
 
 int main() {
-  test_blit();
+  test_instructions();
 
   return 0;
 }
