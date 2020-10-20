@@ -45,7 +45,7 @@ void test_blit() {
 void test_instructions() {
   Chip8 *c8 = c8_init();
 
-  FILE *instfile = fopen("test.c8", "rb");
+  FILE *instfile = fopen("BC_test.ch8", "rb");
 
   if(instfile) {
     fseek(instfile, 0, SEEK_END);
